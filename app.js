@@ -6,6 +6,7 @@ import {defaultKeymap, history, historyKeymap, indentWithTab} from '@codemirror/
 import {syntaxHighlighting, HighlightStyle, bracketMatching} from '@codemirror/language';
 import {tags} from '@lezer/highlight';
 import {setupWorkspace, enhanceGrid} from './js/workspace.js';
+import {renderPractice, evaluateExercise} from './js/practice.js';
 import {schema, notes} from './js/schema.js';
 const $=id=>document.getElementById(id), config=window.SQL_LAB_CONFIG, fmt=n=>Number(n).toLocaleString('en-US');
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
@@ -14,8 +15,9 @@ let queries=read('sql-lab-history',[]), solved=new Set(read('sql-lab-solved',[])
 window.labMetrics={counts:{}};
 function event(path){if(config.goatcounter)window.goatcounter?.count({path,title:path,event:true})}
 $('app-name').textContent=config.appName || 'SQL Practice Lab';document.title=config.appName || 'SQL Practice Lab';$('sales-note').textContent=`sales is the ${fmt(config.salesRows)}-row version.`;
-$('course').textContent=`${config.course.code} · ${config.course.title}${config.course.instructor?' · Prof. '+config.course.instructor:''} · ${config.course.term}`;
-if(config.course.instructor){$('instructor').hidden=false;$('instructor').textContent=`Prof. ${config.course.instructor}`}
+$('course-line-1').textContent=`${config.course.code} · ${config.course.title}`;
+$('course-line-2').textContent=[config.course.instructor?'Prof. '+config.course.instructor:'',config.course.term].filter(Boolean).join(' · ');
+$('credit-for').textContent=`For ${config.course.instructor?'Prof. '+config.course.instructor+' · ':''}${config.course.code}`;
 if(config.repoUrl){$('repo').hidden=false;$('repo').href=config.repoUrl}
 if(config.goatcounter){$('analytics-note').hidden=false;const s=document.createElement('script');s.async=true;s.src='https://gc.zgo.at/count.js';s.dataset.goatcounter=`https://${config.goatcounter}.goatcounter.com/count`;document.head.append(s)}
 $('about-open').onclick=()=>$('about').showModal();$('about-close').onclick=()=>$('about').close();
@@ -49,14 +51,29 @@ $('save-file').onclick=()=>downloadBlob(new Blob([editor.state.doc.toString()],{
 $('explain').onclick=()=>{if(!ready||running)return;const sel=editor.state.selection.main;const text=sel.empty?editor.state.doc.toString():editor.state.sliceDoc(sel.from,sel.to);if(text.trim()){setQuery('EXPLAIN '+text);run()}};
 $('stop').onclick=()=>{start();$('status').textContent='Query stopped. Reloading database.'};
 function renderHistory(){$('history').replaceChildren();if(!queries.length){const p=document.createElement('p');p.className='empty-state';p.textContent='Your last 30 queries will appear here. Run a query to begin.';$('history').append(p)}for(const q of queries){const b=document.createElement('button');b.className='history-button';b.textContent=q;b.title=q;b.onclick=()=>setQuery(q);$('history').append(b)}}renderHistory();
-if(config.showExercises){fetch('exercises.json').then(r=>{if(!r.ok)throw Error('Could not load exercises.');return r.json()}).then(data=>{workspace.onExercises(data,solved);for(const set of data.sets){const d=document.createElement('details');d.className='set';const s=document.createElement('summary');s.textContent=set.title;const progress=document.createElement('span');progress.className='set-progress';progress.dataset.set=set.id;progress.textContent=`${set.exercises.filter(ex=>solved.has(ex.id)).length} of ${set.exercises.length}`;s.append(progress);d.append(s);for(const ex of set.exercises){const b=document.createElement('button');b.className='exercise-button';b.dataset.id=ex.id;b.textContent=ex.prompt;b.classList.toggle('solved',solved.has(ex.id));b.onclick=()=>{active=ex;$('exercise').hidden=false;$('prompt').textContent=ex.prompt;$('check').textContent=ex.expected===null?'Check not available yet':'Run your query to check the result.';$('check').className='';document.querySelectorAll('.exercise-button').forEach(el=>el.classList.toggle('active',el===b));editor.focus()};d.append(b)}$('exercises').append(d)}}).catch(e=>$('exercises').textContent=e.message)}else {$('practice').hidden=true;$('practice-tab').hidden=true;}
+function updateSalesRequirements(){
+ document.querySelectorAll('.sales-needed').forEach(note=>note.hidden=salesReady);
+ $('exercise-sales-note').hidden=!active?.needsSales||salesReady;
+}
+if(config.showExercises){
+ fetch('exercises.json').then(r=>{if(!r.ok)throw Error('Could not load exercises.');return r.json()}).then(data=>{
+  workspace.onExercises(data,solved);
+  renderPractice({data,solved,salesReady,onSelect(ex,button){
+   active=ex;$('exercise').hidden=false;$('prompt').textContent=ex.prompt;
+   $('check').textContent=ex.expected===null?'Check not available yet':'Run your query to check the result.';
+   $('check').className='';$('check-note').textContent='';$('check-note').hidden=true;updateSalesRequirements();
+   document.querySelectorAll('.exercise-button').forEach(el=>el.classList.toggle('active',el===button));
+   selectTab('query');editor.focus();
+  }});
+ }).catch(e=>$('exercises').textContent=e.message);
+}else {$('practice').hidden=true;$('practice-tab').hidden=true;}
 $('clear-exercise').onclick=()=>{active=null;$('exercise').hidden=true;document.querySelectorAll('.exercise-button').forEach(b=>b.classList.remove('active'))};
-function check(result,ex){if(!ex||active?.id!==ex.id)return;if(ex.expected===null||!ex.accept){$('check').textContent='Check not available yet';return}
- const value=ex.check==='value'&&result.count===1&&result.fields.length===1?result.rows[0][0]:null;
- const match=ex.accept.find(a=>ex.check==='value'?value!==null&&Number.isFinite(Number(value))&&Math.abs(Number(value)-a.value)<=.001:result.count===a.count);
- const label=ex.check==='value'?'Value':'Rows', actual=ex.check==='value'?(value===null?'not a single value':fmt(value)):fmt(result.count);
- $('check').textContent=`${label}: ${actual}. ${match?`Matches the expected ${ex.check==='value'?'value':'row count'}.`:`Expected ${ex.accept.map(a=>fmt(ex.check==='value'?a.value:a.count)).join(' or ')}.`}${match?.note?' '+match.note:''}`;
- $('check').className=match?'match':'';
+function check(result,ex){
+ if(!ex||active?.id!==ex.id)return;
+ if(ex.needsSales&&!salesReady){$('check').textContent='Run your query after the sales table loads.';$('check').className='';$('check-note').hidden=true;return;}
+ const {message,match}=evaluateExercise(result,ex);
+ $('check').textContent=message;$('check').className=match?'match':'';
+ $('check-note').textContent=match?.note||'';$('check-note').hidden=!match?.note;
  if(match&&!solved.has(ex.id)){solved.add(ex.id);save('sql-lab-solved',[...solved]);document.querySelector(`[data-id="${ex.id}"]`)?.classList.add('solved');workspace.onSolved(solved);event(`exercise-solved/${ex.id}`)}
 }
 function hints(query,error='',count=0){const out=[];
@@ -83,7 +100,7 @@ function render(r){selectTab('data');$('result-meta').textContent=`Total rows: $
 function formatError(m,query){let text=`ERROR:  ${m.message}`;if(m.position){const pos=Number(m.position)-1,before=query.slice(0,pos),lineNo=before.split('\n').length,line=query.split('\n')[lineNo-1],col=pos-(before.lastIndexOf('\n')+1),prefix=`LINE ${lineNo}: `;text+=`\n${prefix}${line}\n${' '.repeat(prefix.length+col)}^`}if(m.code)text+=`\n\nSQL state: ${m.code}`;if(m.position)text+=`\nCharacter: ${m.position}`;return text}
 function loadSales(){if(!ready||loadingSales||salesReady)return;loadingSales=true;workspace.onState('loading',0);$('load-sales').hidden=true;$('count-sales').textContent='loading 0%';$('status').textContent='Ready. Sales table loading';worker.postMessage({type:'sales'})}
 $('load-sales').onclick=loadSales;
-function start(){workspace.onState('initial');worker?.terminate();ready=false;salesReady=false;loadingSales=false;pending=null;running=null;$('queued').hidden=true;$('run').disabled=true;$('stop').disabled=false;$('explain').disabled=true;$('download').disabled=true;$('progress').value=0;$('status').textContent='Loading products, stores, counties';$('error').hidden=true;$('hints').replaceChildren();$('table-wrap').replaceChildren();$('table-wrap').textContent='Pick a table or run a query to see results.';$('result-meta').textContent='Total rows: 0';$('runtime').textContent='Ready';$('success').textContent='';$('stop').disabled=true;$('explain').disabled=true;selectTab('data');window.labMetrics={counts:{},started:performance.now()};for(const t in schema)$(`count-${t}`).textContent='Pending';
+function start(){workspace.onState('initial');worker?.terminate();ready=false;salesReady=false;updateSalesRequirements();loadingSales=false;pending=null;running=null;$('queued').hidden=true;$('run').disabled=true;$('stop').disabled=false;$('explain').disabled=true;$('download').disabled=true;$('progress').value=0;$('status').textContent='Loading products, stores, counties';$('error').hidden=true;$('hints').replaceChildren();$('table-wrap').replaceChildren();$('table-wrap').textContent='Pick a table or run a query to see results.';$('result-meta').textContent='Total rows: 0';$('runtime').textContent='Ready';$('success').textContent='';$('stop').disabled=true;$('explain').disabled=true;selectTab('data');window.labMetrics={counts:{},started:performance.now()};for(const t in schema)$(`count-${t}`).textContent='Pending';
  worker=new Worker(new URL('./js/db-worker.js',import.meta.url),{type:'module'});
  worker.onerror=e=>{$('status').textContent=`Database could not start: ${e.message}. Reset database to retry.`};
  worker.onmessage=({data:m})=>{
@@ -91,7 +108,7 @@ function start(){workspace.onState('initial');worker?.terminate();ready=false;sa
  if(m.type==='ready'){ready=true;window.labMetrics.editorReady=performance.now();$('run').disabled=false;$('stop').disabled=true;$('explain').disabled=false;$('status').textContent='Ready. Products, stores, counties loaded.';$('progress').value=15;workspace.onState('small-ready');if(matchMedia('(max-width: 1099px)').matches){$('load-sales').hidden=false;workspace.onState('idle')}else loadSales()}
  if(m.type==='progress'){const pct=m.total?Math.round(m.loaded/m.total*100):0;$('status').textContent=`Ready. Sales table loading ${pct}% · ${(m.loaded/1048576).toFixed(1)} MB downloaded`;$('progress').value=15+pct*.65;$('count-sales').textContent=`loading ${pct}%`;workspace.onState('loading',pct)}
  if(m.type==='loadingRows'){$('status').textContent='Ready. Sales table loading rows';$('progress').value=85;$('count-sales').textContent='loading rows';workspace.onState('rows')}
- if(m.type==='salesReady'){salesReady=true;loadingSales=false;workspace.onState('ready');window.labMetrics.salesReady=performance.now();$('status').textContent='Ready. All four tables loaded.';$('progress').value=100;console.info('SQL_LAB_LOAD_METRICS', JSON.stringify({...window.labMetrics, memory:performance.memory?{usedJSHeapSize:performance.memory.usedJSHeapSize,totalJSHeapSize:performance.memory.totalJSHeapSize}:null}));event('sales-loaded');if(pending&&!running){const job=pending;pending=null;$('queued').hidden=true;execute(job)}}
+ if(m.type==='salesReady'){salesReady=true;updateSalesRequirements();loadingSales=false;workspace.onState('ready');window.labMetrics.salesReady=performance.now();$('status').textContent='Ready. All four tables loaded.';$('progress').value=100;console.info('SQL_LAB_LOAD_METRICS', JSON.stringify({...window.labMetrics, memory:performance.memory?{usedJSHeapSize:performance.memory.usedJSHeapSize,totalJSHeapSize:performance.memory.totalJSHeapSize}:null}));event('sales-loaded');if(pending&&!running){const job=pending;pending=null;$('queued').hidden=true;execute(job)}}
  if(m.type==='result'){render(m);window.labMetrics.lastResult=m;running=null;$('run').disabled=false;$('stop').disabled=true;$('explain').disabled=false;if(pending&&salesReady){const job=pending;pending=null;$('queued').hidden=true;execute(job)}}
  if(m.type==='error'){const job=running;$('error').textContent=formatError(m,job.sql);$('error').hidden=false;$('result-meta').textContent='Query failed';$('runtime').textContent='';$('runtime').title='';selectTab('messages');hints(job.sql,m.message);if(m.position){const at=Math.min(editor.state.doc.length-1,job.offset+Number(m.position)-1);if(at>=0)editor.dispatch({effects:markError.of(at),selection:{anchor:at},scrollIntoView:true})}window.labMetrics.lastError=m;running=null;$('run').disabled=false;$('stop').disabled=true;$('explain').disabled=false;if(pending&&salesReady){const job=pending;pending=null;$('queued').hidden=true;execute(job)}}
  if(m.type==='refreshed'){for(const [t,n]of Object.entries(m.counts))$(`count-${t}`).textContent=fmt(n);workspace.toast('Object Explorer refreshed.')}

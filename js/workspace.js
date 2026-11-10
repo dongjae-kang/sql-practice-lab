@@ -38,7 +38,7 @@ export function setupWorkspace(api) {
   if(state==='failed'){label.textContent=`Sales load failed: ${value}. Use File > Reset database to retry.`;tree.hidden=true;}
  }
  function onSolved(solved){for(const set of exerciseSets){const el=document.querySelector(`[data-set="${set.id}"]`);if(el)el.textContent=`${set.exercises.filter(e=>solved.has(e.id)).length} of ${set.exercises.length}`}}
- return {toast,onState,onSolved,onExecute(){hideQuick();$('grid-note').hidden=true;},onExercises(data){exerciseSets=data.sets;$('practice-tab').textContent=`Practice · ${data.sets.reduce((n,s)=>n+s.exercises.length,0)}`;}};
+ return {toast,onState,onSolved,onExecute(){hideQuick();$('grid-note').hidden=true;},onExercises(data){exerciseSets=data.classes.filter(c=>c.status!=='upcoming').flatMap(c=>c.sets);$('practice-tab').textContent=`Practice · ${exerciseSets.reduce((n,s)=>n+s.exercises.length,0)}`;}};
 }
 
 export function enhanceGrid(table,result,note,toast){
