@@ -1,0 +1,430 @@
+{
+  "source": "Practice prompts follow the Class 2 slides of SIPA IA 6652. Expected row counts computed on the files in site/data with PostgreSQL 16 on 2026-11-09.",
+  "sets": [
+    {
+      "id": "demo",
+      "title": "Class 2 · SQL demo",
+      "concepts": [
+        "WHERE",
+        "<>",
+        "CAST"
+      ],
+      "exercises": [
+        {
+          "id": "demo-1",
+          "prompt": "Which products are not from vendor 'Jim Beam Brands'?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 9052
+            }
+          ]
+        },
+        {
+          "id": "demo-2",
+          "prompt": "Which products are over 90 proof?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 765
+            }
+          ]
+        },
+        {
+          "id": "demo-3",
+          "prompt": "Which products have a case cost of less than $60?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 2826
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "we-do",
+      "title": "Class 2 · We do",
+      "concepts": [
+        "WHERE",
+        "AND",
+        "OR",
+        "DISTINCT",
+        "CAST",
+        "ILIKE"
+      ],
+      "exercises": [
+        {
+          "id": "wedo-1",
+          "prompt": "Which products come in packs larger than 12?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 1106
+            }
+          ]
+        },
+        {
+          "id": "wedo-2",
+          "prompt": "Which products have a case price of less than $70?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 3938
+            }
+          ]
+        },
+        {
+          "id": "wedo-3",
+          "prompt": "Which products come in packs larger than 12 and have a case cost of less than $70?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 632
+            }
+          ]
+        },
+        {
+          "id": "wedo-4",
+          "prompt": "Which types of products have a proof of 85 or more?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 46,
+              "note": "\"Types\" read as distinct category names."
+            }
+          ]
+        },
+        {
+          "id": "wedo-5",
+          "prompt": "Which products are scotch whiskies or are over 85 proof?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 1877
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "you-do",
+      "title": "Class 2 · You do",
+      "concepts": [
+        "COUNT",
+        "DISTINCT",
+        "WHERE"
+      ],
+      "exercises": [
+        {
+          "id": "youdo-1",
+          "prompt": "How many unique products have less than 12 in a pack?",
+          "check": "value",
+          "accept": [
+            {
+              "value": 3595,
+              "note": "Counted as distinct item descriptions."
+            },
+            {
+              "value": 4433,
+              "note": "Counted as distinct item numbers. Some item numbers share a description."
+            }
+          ]
+        },
+        {
+          "id": "youdo-2",
+          "prompt": "How many stores are active?",
+          "check": "value",
+          "accept": [
+            {
+              "value": 1425
+            }
+          ]
+        },
+        {
+          "id": "youdo-3",
+          "prompt": "How many stores are inactive?",
+          "check": "value",
+          "accept": [
+            {
+              "value": 548
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "breakout-where",
+      "title": "Class 2 · Break-out: filtering",
+      "concepts": [
+        "AND",
+        "OR",
+        "parentheses",
+        "BETWEEN",
+        "NOT",
+        "ILIKE"
+      ],
+      "exercises": [
+        {
+          "id": "bw-1",
+          "prompt": "Which products have a case cost of more than $100?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 3730
+            }
+          ]
+        },
+        {
+          "id": "bw-2",
+          "prompt": "Which tequilas have a case cost of more than $100?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 422
+            }
+          ]
+        },
+        {
+          "id": "bw-3",
+          "prompt": "Which tequilas or scotch whiskies have a case cost of more than $100?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 1035
+            }
+          ]
+        },
+        {
+          "id": "bw-4",
+          "prompt": "Which tequilas or scotch whiskies have a case cost between $100 and $120?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 120
+            }
+          ]
+        },
+        {
+          "id": "bw-5",
+          "prompt": "Which whiskies of any kind have a case cost more than $100?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 853,
+              "note": "Includes WHISKEY LIQUEUR (pattern '%whisk%')."
+            },
+            {
+              "count": 819,
+              "note": "Only categories named WHISKIES (pattern '%whiskies%'). WHISKEY LIQUEUR is a liqueur, so this reading leaves it out."
+            }
+          ]
+        },
+        {
+          "id": "bw-6",
+          "prompt": "Which whiskies of any kind have a case cost between $100 and $150?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 432,
+              "note": "Includes WHISKEY LIQUEUR (pattern '%whisk%')."
+            },
+            {
+              "count": 400,
+              "note": "Only categories named WHISKIES (pattern '%whiskies%')."
+            }
+          ]
+        },
+        {
+          "id": "bw-7",
+          "prompt": "Which products except tequilas have a case cost between $100 and $120?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 976,
+              "note": "Products with no category (NULL) are left out, because NOT ILIKE on NULL is not true."
+            },
+            {
+              "count": 983,
+              "note": "Products with no category (NULL) are kept by adding OR category_name IS NULL."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "agg-together",
+      "title": "Class 2 · Aggregation, together",
+      "concepts": [
+        "GROUP BY",
+        "AVG",
+        "MIN",
+        "MAX"
+      ],
+      "exercises": [
+        {
+          "id": "at-1",
+          "prompt": "What is the average bottle size per category name and item description?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 7418
+            }
+          ]
+        },
+        {
+          "id": "at-2",
+          "prompt": "What is the minimum proof per category name and vendor name?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 1294
+            }
+          ]
+        },
+        {
+          "id": "at-3",
+          "prompt": "What is the maximum bottle size per category name?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 70,
+              "note": "70 groups including the group of products with no category (NULL)."
+            }
+          ]
+        },
+        {
+          "id": "at-4",
+          "prompt": "What is the maximum bottle size in general?",
+          "check": "value",
+          "accept": [
+            {
+              "value": 140000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "agg-breakout",
+      "title": "Class 2 · Break-out: aggregation",
+      "concepts": [
+        "GROUP BY",
+        "SUM",
+        "COUNT"
+      ],
+      "exercises": [
+        {
+          "id": "ab-1",
+          "prompt": "What are the total sales per store (from the sales table)?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 1352
+            }
+          ],
+          "needsSales": true
+        },
+        {
+          "id": "ab-2",
+          "prompt": "What are the total bottles sold per store?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 1352
+            }
+          ],
+          "needsSales": true
+        },
+        {
+          "id": "ab-3",
+          "prompt": "What are the total bottles sold per store and per item?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 372499,
+              "note": "Grouped by store and item number."
+            },
+            {
+              "count": 301986,
+              "note": "Grouped by store and item description. Some descriptions cover several item numbers."
+            }
+          ],
+          "needsSales": true
+        },
+        {
+          "id": "ab-4",
+          "prompt": "How many transactions occurred per store?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 1352
+            }
+          ],
+          "needsSales": true
+        },
+        {
+          "id": "ab-5",
+          "prompt": "How many products are available per vendor?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 271
+            }
+          ]
+        },
+        {
+          "id": "ab-6",
+          "prompt": "How many products of each category are available per vendor?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 1294
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-types",
+      "title": "Class 2 · Data types and CAST",
+      "concepts": [
+        "CAST",
+        "AVG",
+        "money"
+      ],
+      "exercises": [
+        {
+          "id": "dt-1",
+          "prompt": "What is the average proof of all products?",
+          "check": "value",
+          "accept": [
+            {
+              "value": 65.6266
+            }
+          ]
+        },
+        {
+          "id": "dt-2",
+          "prompt": "What is the average proof per vendor_name?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 271
+            }
+          ]
+        },
+        {
+          "id": "dt-3",
+          "prompt": "What is the average bottle_price per vendor and item description?",
+          "check": "rows",
+          "accept": [
+            {
+              "count": 7414
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
